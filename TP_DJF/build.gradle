@@ -1,0 +1,226 @@
+plugins {
+    id 'java'
+    id 'war'
+}
+
+group = 'fr.ubo.hello'
+version = '1.0-SNAPSHOT'
+
+repositories {
+    mavenCentral()
+}
+
+sourceCompatibility = '11'
+targetCompatibility = '11'
+
+tasks.withType(JavaCompile) {
+    options.encoding = 'UTF-8'
+}
+
+dependencies {
+    compileOnly 'javax.servlet:javax.servlet-api:4.0.1'
+    implementation 'javax.servlet:jstl:1.2'
+
+    implementation 'com.mysql:mysql-connector-j:8.1.0'
+
+    implementation 'org.springframework:spring-core:5.3.30'
+    implementation 'org.springframework:spring-web:5.3.30'
+    implementation 'org.springframework:spring-webmvc:5.3.30'
+    implementation 'org.springframework:spring-beans:5.3.30'
+    implementation 'org.springframework:spring-context:5.3.30'
+    implementation 'org.springframework:spring-expression:5.3.30'
+
+    implementation 'com.fasterxml.jackson.core:jackson-databind:2.15.2'
+    implementation 'com.fasterxml.jackson.core:jackson-core:2.15.2'
+    implementation 'com.fasterxml.jackson.core:jackson-annotations:2.15.2'
+
+    implementation 'org.apache.logging.log4j:log4j-core:2.20.0'
+    implementation 'org.apache.logging.log4j:log4j-api:2.20.0'
+    implementation 'org.apache.logging.log4j:log4j-web:2.20.0'
+    implementation 'org.apache.logging.log4j:log4j-slf4j-impl:2.20.0'
+    implementation 'org.slf4j:slf4j-api:2.0.7'
+    implementation 'org.slf4j:jcl-over-slf4j:2.0.7'
+
+    implementation 'org.apache.commons:commons-lang3:3.13.0'
+
+    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.9.3'
+    testImplementation 'org.junit.jupiter:junit-jupiter-params:5.9.3'
+    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.9.3'
+
+    testImplementation 'org.mockito:mockito-core:4.11.0'
+    testImplementation 'org.mockito:mockito-junit-jupiter:4.11.0'
+
+    testImplementation 'net.bytebuddy:byte-buddy:1.14.4'
+    testImplementation 'net.bytebuddy:byte-buddy-agent:1.14.4'
+    testImplementation 'org.objenesis:objenesis:3.3'
+
+    testImplementation 'javax.servlet:javax.servlet-api:4.0.1'
+    testImplementation 'org.springframework:spring-test:5.3.30'
+    testImplementation 'org.assertj:assertj-core:3.24.2'
+    testImplementation 'com.jayway.jsonpath:json-path:2.8.0'
+    testImplementation 'org.apache.logging.log4j:log4j-core:2.20.0'
+}
+
+configurations.all {
+    resolutionStrategy {
+        force 'com.fasterxml.jackson.core:jackson-databind:2.15.2',
+                'com.fasterxml.jackson.core:jackson-core:2.15.2',
+                'com.fasterxml.jackson.core:jackson-annotations:2.15.2',
+                'org.apache.logging.log4j:log4j-core:2.20.0',
+                'org.apache.logging.log4j:log4j-api:2.20.0',
+                'org.slf4j:slf4j-api:2.0.7',
+
+                'org.junit.jupiter:junit-jupiter-api:5.9.3',
+                'org.junit.jupiter:junit-jupiter-params:5.9.3',
+                'org.junit.jupiter:junit-jupiter-engine:5.9.3',
+                'org.junit.platform:junit-platform-commons:1.9.3',
+                'org.junit.platform:junit-platform-engine:1.9.3',
+
+                'org.mockito:mockito-core:4.11.0',
+                'org.mockito:mockito-junit-jupiter:4.11.0',
+                'net.bytebuddy:byte-buddy:1.14.4',
+                'net.bytebuddy:byte-buddy-agent:1.14.4',
+                'org.objenesis:objenesis:3.3',
+
+                'org.assertj:assertj-core:3.24.2',
+                'com.jayway.jsonpath:json-path:2.8.0',
+                'org.springframework:spring-test:5.3.30'
+
+        exclude group: 'commons-logging', module: 'commons-logging'
+        exclude group: 'log4j', module: 'log4j'
+        exclude group: 'org.slf4j', module: 'slf4j-simple'
+        exclude group: 'org.slf4j', module: 'slf4j-log4j12'
+        exclude group: 'org.junit.vintage', module: 'junit-vintage-engine'
+
+        failOnVersionConflict()
+    }
+}
+
+war {
+    archiveFileName = 'ROOT.war'
+    from 'src/main/webapp'
+
+    manifest {
+        attributes(
+                'Implementation-Title': 'JDF Spring MVC REST',
+                'Implementation-Version': version,
+                'Built-By': System.getProperty('user.name'),
+                'Built-Date': new Date(),
+                'Built-JDK': System.getProperty('java.version')
+        )
+    }
+}
+
+tasks.named("jar") {
+    enabled = false
+}
+
+test {
+    useJUnitPlatform()
+
+    testLogging {
+        events "passed", "skipped", "failed"
+        exceptionFormat "full"
+        showStandardStreams = true
+        showExceptions true
+        showCauses true
+    }
+
+    systemProperty 'log4j.configurationFile', 'src/test/resources/log4j2-test.xml'
+
+
+    minHeapSize = "128m"
+    maxHeapSize = "512m"
+
+
+    timeout = Duration.ofMinutes(5)
+}
+
+tasks.javadoc {
+    group = "documentation"
+    description = "Génère la documentation Java (Javadoc) du projet"
+
+    source = sourceSets.main.allJava
+    options.encoding = "UTF-8"
+    options.windowTitle = "Documentation JDF v${project.version}"
+    options.docTitle = "Documentation JDF v${project.version}"
+    options.links("https://docs.oracle.com/en/java/javase/11/docs/api/")
+    options.addBooleanOption("private", false)
+
+    include 'fr/ubo/hello/**'
+}
+
+tasks.register("dist", Copy) {
+    group = "build"
+    description = "Prépare la distribution de l'application"
+    dependsOn(tasks.named("war"))
+
+    into(layout.buildDirectory.dir("dist"))
+    from(tasks.named("war")) {
+        into("webapp")
+    }
+    from("README.md") {
+        into("docs")
+    }
+}
+
+tasks.register("all") {
+    group = "build"
+    description = "Build complet avec documentation et distribution"
+    dependsOn("clean", "build", "javadoc", "dist")
+}
+
+tasks.named('clean') {
+    doLast {
+        delete 'out', 'dist', 'build'
+    }
+}
+
+tasks.withType(Test) {
+    reports {
+        html.required = true
+        junitXml.required = true
+    }
+}
+
+tasks.withType(JavaCompile) {
+    options.compilerArgs += ['-Xlint:unchecked', '-Xlint:deprecation']
+    options.deprecation = true
+}
+
+sourceSets {
+    main {
+        java {
+            srcDirs = ['src/main/java']
+        }
+        resources {
+            srcDirs = ['src/main/resources', 'src/main/webapp']
+        }
+    }
+    test {
+        java {
+            srcDirs = ['src/test/java']
+        }
+        resources {
+            srcDirs = ['src/test/resources']
+        }
+    }
+}
+
+tasks.register('development') {
+    group = 'development'
+    description = 'Tâches de développement'
+    dependsOn('clean', 'build', 'test')
+}
+
+tasks.withType(Test) {
+    outputs.upToDateWhen { false }
+}
+
+tasks.withType(War) {
+    enabled = true
+    archiveBaseName = 'jdf-app'
+
+    exclude('**/.gitkeep')
+    exclude('**/README.md')
+}

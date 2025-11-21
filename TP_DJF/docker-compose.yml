@@ -1,0 +1,62 @@
+services:
+  mysql-db:
+    image: mysql:8.0
+    container_name: mysql-db
+    environment:
+      MYSQL_ROOT_PASSWORD: 1234
+      MYSQL_DATABASE: jdf
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    networks:
+      - DJF
+
+  tomcat-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: tomcat-app
+    depends_on:
+      - mysql-db
+    ports:
+      - "8080:8080"
+    volumes:
+      - tomcat_logs:/app/logs
+    networks:
+      - DJF
+
+  frontend:
+    build:
+      context: ../tp_dfj-front
+      dockerfile: Dockerfile.frontend
+    container_name: frontend-app
+    ports:
+      - "3000:80"
+    depends_on:
+      - tomcat-app
+    networks:
+      - DJF
+
+  nginx:
+    image: nginx:alpine
+    container_name: nginx-proxy
+    ports:
+      - "80:80"
+    volumes:
+      - ./sites/:/etc/nginx/conf.d/
+      - nginx_logs:/var/log/nginx
+    depends_on:
+      - tomcat-app
+      - frontend
+    networks:
+      - DJF
+
+networks:
+  DJF:
+    name: DJF
+
+volumes:
+  mysql_data:
+  tomcat_logs:
+  nginx_logs:
