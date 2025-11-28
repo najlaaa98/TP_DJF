@@ -34,7 +34,6 @@
     </Appenders>
 
     <Loggers>
-        <!-- Votre application -->
         <Logger name="fr.ubo.hello" level="DEBUG" additivity="false">
             <AppenderRef ref="Console"/>
             <AppenderRef ref="FileAppender"/>

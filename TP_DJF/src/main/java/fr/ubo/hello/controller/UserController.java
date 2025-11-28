@@ -1,214 +1,114 @@
 package fr.ubo.hello.controller;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import fr.ubo.hello.bean.User;
 import fr.ubo.hello.service.UserService;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
 
-import javax.servlet.ServletException;
-import javax.servlet.annotation.WebServlet;
-import javax.servlet.http.HttpServlet;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import java.io.IOException;
 import java.util.List;
 
-@WebServlet("/api/users/*")
-public class UserController extends HttpServlet {
-    private UserService userService;
-    private ObjectMapper objectMapper;
+@RestController
+@RequestMapping("/api/users")
+@CrossOrigin(origins = "*")
+public class UserController {
 
-    @Override
-    public void init() throws ServletException {
-        this.userService = new UserService(false); // false = BD, true = Mock
-        this.objectMapper = new ObjectMapper();
+    private final UserService userService;
+
+
+    public UserController() {
+
+        this.userService = new UserService(false);
     }
 
-    @Override
-    protected void doGet(HttpServletRequest request, HttpServletResponse response)
-            throws ServletException, IOException {
-
-        response.setContentType("application/json");
-        response.setCharacterEncoding("UTF-8");
-        setupCorsHeaders(response);
-
-        String pathInfo = request.getPathInfo();
-
+    @GetMapping
+    public ResponseEntity<?> getAllUsers() {
         try {
-            if (pathInfo == null || pathInfo.equals("/")) {
-                List<User> users = userService.getAllUsers();
-                String jsonResponse = objectMapper.writeValueAsString(users);
-                response.getWriter().write(jsonResponse);
-
-            } else {
-                String[] pathParts = pathInfo.split("/");
-                if (pathParts.length == 2) {
-                    int userId = Integer.parseInt(pathParts[1]);
-                    User user = userService.getUserById(userId);
-
-                    if (user != null) {
-                        String jsonResponse = objectMapper.writeValueAsString(user);
-                        response.getWriter().write(jsonResponse);
-                    } else {
-                        response.setStatus(HttpServletResponse.SC_NOT_FOUND);
-                        response.getWriter().write("{\"error\": \"Utilisateur non trouvé\"}");
-                    }
-                } else {
-                    response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-                    response.getWriter().write("{\"error\": \"URL invalide\"}");
-                }
-            }
-        } catch (NumberFormatException e) {
-            response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-            response.getWriter().write("{\"error\": \"ID invalide\"}");
+            List<User> users = userService.getAllUsers();
+            return ResponseEntity.ok(users);
         } catch (Exception e) {
-            response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
-            response.getWriter().write("{\"error\": \"Erreur serveur: " + e.getMessage() + "\"}");
-            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("{\"error\": \"Erreur serveur: " + e.getMessage() + "\"}");
         }
     }
 
-    @Override
-    protected void doPost(HttpServletRequest request, HttpServletResponse response)
-            throws ServletException, IOException {
-
-        response.setContentType("application/json");
-        response.setCharacterEncoding("UTF-8");
-        setupCorsHeaders(response);
-
+    @GetMapping("/{id}")
+    public ResponseEntity<?> getUserById(@PathVariable("id") int userId) {
         try {
-            // Lire le JSON du body de la requête
-            User user = objectMapper.readValue(request.getReader(), User.class);
+            User user = userService.getUserById(userId);
+            if (user != null) {
+                return ResponseEntity.ok(user);
+            } else {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body("{\"error\": \"Utilisateur non trouvé\"}");
+            }
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("{\"error\": \"Erreur serveur: " + e.getMessage() + "\"}");
+        }
+    }
 
-            // Validation basique
+    @PostMapping
+    public ResponseEntity<?> createUser(@RequestBody User user) {
+        try {
             if (user.getNom() == null || user.getNom().trim().isEmpty() ||
                     user.getPrenom() == null || user.getPrenom().trim().isEmpty() ||
                     user.getEmail() == null || user.getEmail().trim().isEmpty()) {
 
-                response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-                response.getWriter().write("{\"error\": \"Nom, prénom et email sont obligatoires\"}");
-                return;
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body("{\"error\": \"Nom, prénom et email sont obligatoires\"}");
             }
 
             if (userService.addUser(user)) {
-                response.setStatus(HttpServletResponse.SC_CREATED);
-                response.getWriter().write("{\"message\": \"Utilisateur créé avec succès\", \"id\": " + user.getId() + "}");
+                return ResponseEntity.status(HttpStatus.CREATED)
+                        .body("{\"message\": \"Utilisateur créé avec succès\", \"id\": " + user.getId() + "}");
             } else {
-                response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-                response.getWriter().write("{\"error\": \"Erreur lors de la création ou email déjà existant\"}");
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body("{\"error\": \"Erreur lors de la création ou email déjà existant\"}");
             }
         } catch (Exception e) {
-            response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
-            response.getWriter().write("{\"error\": \"Erreur serveur: " + e.getMessage() + "\"}");
-            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("{\"error\": \"Erreur serveur: " + e.getMessage() + "\"}");
         }
     }
 
-    @Override
-    protected void doPut(HttpServletRequest request, HttpServletResponse response)
-            throws ServletException, IOException {
-
-        response.setContentType("application/json");
-        response.setCharacterEncoding("UTF-8");
-        setupCorsHeaders(response);
-
-        String pathInfo = request.getPathInfo();
-
-        if (pathInfo == null || pathInfo.equals("/")) {
-            response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-            response.getWriter().write("{\"error\": \"ID manquant\"}");
-            return;
-        }
-
+    @PutMapping("/{id}")
+    public ResponseEntity<?> updateUser(@PathVariable("id") int userId, @RequestBody User user) {
         try {
-            String[] pathParts = pathInfo.split("/");
-            if (pathParts.length == 2) {
-                int userId = Integer.parseInt(pathParts[1]);
+            user.setId(userId);
 
-                User user = objectMapper.readValue(request.getReader(), User.class);
-                user.setId(userId);
+            if (user.getNom() == null || user.getNom().trim().isEmpty() ||
+                    user.getPrenom() == null || user.getPrenom().trim().isEmpty() ||
+                    user.getEmail() == null || user.getEmail().trim().isEmpty()) {
 
-                if (user.getNom() == null || user.getNom().trim().isEmpty() ||
-                        user.getPrenom() == null || user.getPrenom().trim().isEmpty() ||
-                        user.getEmail() == null || user.getEmail().trim().isEmpty()) {
-
-                    response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-                    response.getWriter().write("{\"error\": \"Nom, prénom et email sont obligatoires\"}");
-                    return;
-                }
-
-                if (userService.updateUser(user)) {
-                    response.getWriter().write("{\"message\": \"Utilisateur modifié avec succès\"}");
-                } else {
-                    response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-                    response.getWriter().write("{\"error\": \"Erreur lors de la modification ou email déjà utilisé\"}");
-                }
-            } else {
-                response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-                response.getWriter().write("{\"error\": \"URL invalide\"}");
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body("{\"error\": \"Nom, prénom et email sont obligatoires\"}");
             }
-        } catch (NumberFormatException e) {
-            response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-            response.getWriter().write("{\"error\": \"ID invalide\"}");
+
+            if (userService.updateUser(user)) {
+                return ResponseEntity.ok("{\"message\": \"Utilisateur modifié avec succès\"}");
+            } else {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body("{\"error\": \"Erreur lors de la modification ou email déjà utilisé\"}");
+            }
         } catch (Exception e) {
-            response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
-            response.getWriter().write("{\"error\": \"Erreur serveur: " + e.getMessage() + "\"}");
-            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("{\"error\": \"Erreur serveur: " + e.getMessage() + "\"}");
         }
     }
 
-    @Override
-    protected void doDelete(HttpServletRequest request, HttpServletResponse response)
-            throws ServletException, IOException {
-
-        response.setContentType("application/json");
-        response.setCharacterEncoding("UTF-8");
-        setupCorsHeaders(response);
-
-        String pathInfo = request.getPathInfo();
-
-        if (pathInfo == null || pathInfo.equals("/")) {
-            response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-            response.getWriter().write("{\"error\": \"ID manquant\"}");
-            return;
-        }
-
+    @DeleteMapping("/{id}")
+    public ResponseEntity<?> deleteUser(@PathVariable("id") int userId) {
         try {
-            String[] pathParts = pathInfo.split("/");
-            if (pathParts.length == 2) {
-                int userId = Integer.parseInt(pathParts[1]);
-
-                if (userService.deleteUser(userId)) {
-                    response.getWriter().write("{\"message\": \"Utilisateur supprimé avec succès\"}");
-                } else {
-                    response.setStatus(HttpServletResponse.SC_NOT_FOUND);
-                    response.getWriter().write("{\"error\": \"Utilisateur non trouvé\"}");
-                }
+            if (userService.deleteUser(userId)) {
+                return ResponseEntity.ok("{\"message\": \"Utilisateur supprimé avec succès\"}");
             } else {
-                response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-                response.getWriter().write("{\"error\": \"URL invalide\"}");
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body("{\"error\": \"Utilisateur non trouvé\"}");
             }
-        } catch (NumberFormatException e) {
-            response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-            response.getWriter().write("{\"error\": \"ID invalide\"}");
         } catch (Exception e) {
-            response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
-            response.getWriter().write("{\"error\": \"Erreur serveur: " + e.getMessage() + "\"}");
-            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("{\"error\": \"Erreur serveur: " + e.getMessage() + "\"}");
         }
-    }
-
-
-    @Override
-    protected void doOptions(HttpServletRequest request, HttpServletResponse response)
-            throws ServletException, IOException {
-        setupCorsHeaders(response);
-        response.setStatus(HttpServletResponse.SC_OK);
-    }
-
-    private void setupCorsHeaders(HttpServletResponse response) {
-        response.setHeader("Access-Control-Allow-Origin", "*");
-        response.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
-        response.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
-        response.setHeader("Access-Control-Max-Age", "3600");
     }
 }
