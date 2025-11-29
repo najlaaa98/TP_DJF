@@ -1,35 +1,54 @@
 package fr.ubo.hello.service;
 
 import fr.ubo.hello.bean.User;
+import fr.ubo.hello.bean.OTPRequest;
 import fr.ubo.hello.dao.UserDao;
 import fr.ubo.hello.dao.UserDaoBD;
 import fr.ubo.hello.dao.UserDaoMock;
+import fr.ubo.hello.dao.OTPDao;
+import fr.ubo.hello.dao.OTPDaoBD;
+import fr.ubo.hello.dao.OTPDaoMock;
 
 import java.util.List;
+import java.time.LocalDateTime;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class UserService {
     private UserDao userDao;
+    private OTPDao otpDao;
 
+    // Cache pour gérer les délais entre demandes OTP
+    private final ConcurrentHashMap<String, LocalDateTime> lastOTPRequestTime = new ConcurrentHashMap<>();
 
     public UserService() {
         this.userDao = new UserDaoBD();
+        this.otpDao = new OTPDaoBD();
+        System.out.println("Utilisation des DAO Base de Données");
     }
 
     public UserService(boolean useMock) {
         if (useMock) {
             this.userDao = new UserDaoMock();
-            System.out.println("Utilisation du DAO Mock");
+            this.otpDao = new OTPDaoMock();
+            System.out.println("Utilisation des DAO Mock");
         } else {
             this.userDao = new UserDaoBD();
-            System.out.println("Utilisation du DAO Base de Données");
+            this.otpDao = new OTPDaoBD();
+            System.out.println("Utilisation des DAO Base de Données");
         }
     }
 
-
     public UserService(UserDao userDao) {
         this.userDao = userDao;
+        this.otpDao = new OTPDaoBD(); // Par défaut, OTP en base
     }
 
+    public UserService(UserDao userDao, OTPDao otpDao) {
+        this.userDao = userDao;
+        this.otpDao = otpDao;
+    }
+
+    // === MÉTHODES UTILISATEUR EXISTANTES ===
 
     public List<User> getAllUsers() {
         return userDao.getAllUsers();
@@ -105,14 +124,169 @@ public class UserService {
         return null;
     }
 
-
     public void switchToMock() {
         this.userDao = new UserDaoMock();
-        System.out.println("passage au DAO Mock");
+        this.otpDao = new OTPDaoMock();
+        System.out.println("Passage aux DAO Mock");
     }
 
     public void switchToDatabase() {
         this.userDao = new UserDaoBD();
-        System.out.println("Passage au DAO Base de Données");
+        this.otpDao = new OTPDaoBD();
+        System.out.println("Passage aux DAO Base de Données");
+    }
+
+    // === NOUVELLES MÉTHODES OTP ===
+
+    /**
+     * Sauvegarde une demande OTP en base de données
+     */
+    public void saveOTPRequest(OTPRequest otpRequest) {
+        try {
+            boolean success = otpDao.saveOTPRequest(otpRequest);
+            if (success) {
+                System.out.println("OTP sauvegardé avec succès pour: " + otpRequest.getPhoneNumber());
+            } else {
+                System.err.println("Échec de sauvegarde OTP pour: " + otpRequest.getPhoneNumber());
+            }
+        } catch (Exception e) {
+            System.err.println("Erreur sauvegarde OTP: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * Trouve un OTP valide pour un numéro de téléphone
+     */
+    public OTPRequest findValidOTP(String phoneNumber, LocalDateTime now) {
+        try {
+            OTPRequest otp = otpDao.findValidOTP(phoneNumber, now);
+            if (otp != null) {
+                System.out.println("OTP valide trouvé pour: " + phoneNumber);
+            } else {
+                System.out.println("Aucun OTP valide trouvé pour: " + phoneNumber);
+            }
+            return otp;
+        } catch (Exception e) {
+            System.err.println("Erreur recherche OTP: " + e.getMessage());
+            e.printStackTrace();
+            return null;
+        }
+    }
+
+    /**
+     * Marque un OTP comme utilisé
+     */
+    public void markOTPAsUsed(int otpId) {
+        try {
+            boolean success = otpDao.markOTPAsUsed(otpId);
+            if (success) {
+                System.out.println("OTP marqué comme utilisé: " + otpId);
+            } else {
+                System.err.println("Échec marquage OTP comme utilisé: " + otpId);
+            }
+        } catch (Exception e) {
+            System.err.println("Erreur marquage OTP utilisé: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * Incrémente le compteur de tentatives pour un OTP
+     */
+    public void incrementOTPAttempts(int otpId) {
+        try {
+            boolean success = otpDao.incrementOTPAttempts(otpId);
+            if (success) {
+                System.out.println("Tentative OTP incrémentée: " + otpId);
+            }
+        } catch (Exception e) {
+            System.err.println("Erreur incrémentation tentatives OTP: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * Vérifie si un nouvel OTP peut être demandé (respect du délai de 30 secondes)
+     */
+    public boolean canRequestOTP(String phoneNumber) {
+        LocalDateTime lastRequest = lastOTPRequestTime.get(phoneNumber);
+        if (lastRequest == null) {
+            return true;
+        }
+
+        LocalDateTime now = LocalDateTime.now();
+        boolean canRequest = lastRequest.plusSeconds(30).isBefore(now);
+
+        if (!canRequest) {
+            long secondsRemaining = java.time.Duration.between(now, lastRequest.plusSeconds(30)).getSeconds();
+            System.out.println("Délai OTP non respecté pour " + phoneNumber +
+                    ". Attendez encore " + secondsRemaining + " secondes.");
+        }
+
+        return canRequest;
+    }
+
+    /**
+     * Enregistre le temps de la dernière demande OTP
+     */
+    public void recordOTPRequestTime(String phoneNumber) {
+        lastOTPRequestTime.put(phoneNumber, LocalDateTime.now());
+        System.out.println("Temps OTP enregistré pour: " + phoneNumber);
+    }
+
+    /**
+     * Nettoie les OTP expirés (maintenance)
+     */
+    public void cleanupExpiredOTPs() {
+        try {
+            int deletedCount = otpDao.cleanupExpiredOTPs(LocalDateTime.now());
+            if (deletedCount > 0) {
+                System.out.println("Nettoyage OTP: " + deletedCount + " OTPs expirés supprimés");
+            }
+        } catch (Exception e) {
+            System.err.println("Erreur nettoyage OTP expirés: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * Obtient le nombre de tentatives restantes pour un OTP
+     */
+    public int getRemainingAttempts(int otpId) {
+        try {
+            return otpDao.getRemainingAttempts(otpId);
+        } catch (Exception e) {
+            System.err.println("Erreur obtention tentatives restantes: " + e.getMessage());
+            return 3; // Valeur par défaut
+        }
+    }
+
+    /**
+     * Vérifie si un OTP est bloqué (trop de tentatives)
+     */
+    public boolean isOTPBlocked(int otpId) {
+        try {
+            return otpDao.isOTPBlocked(otpId);
+        } catch (Exception e) {
+            System.err.println("Erreur vérification blocage OTP: " + e.getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Obtient les statistiques OTP pour le débogage
+     */
+    public String getOTPStats() {
+        try {
+            int totalRequests = otpDao.getTotalOTPRequests();
+            int activeRequests = otpDao.getActiveOTPRequests(LocalDateTime.now());
+            int usedRequests = otpDao.getUsedOTPRequests();
+
+            return String.format("Statistiques OTP - Total: %d, Actifs: %d, Utilisés: %d",
+                    totalRequests, activeRequests, usedRequests);
+        } catch (Exception e) {
+            return "Erreur lors de la récupération des statistiques OTP: " + e.getMessage();
+        }
     }
 }

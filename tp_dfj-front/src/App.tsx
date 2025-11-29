@@ -1,23 +1,88 @@
-import {BrowserRouter,Routes, Route} from 'react-router-dom';
+// App.tsx
+import React, { useState, useEffect } from 'react';
+import Login from './composant/Login';
+import OTPVerification from './composant/OTPVerification';
+import ListeUser from './composant/ListeUser';
+import { authService } from './services/api';
 
-import './App.css'
-import ListeUser from './composant/ListeUser'
-import CreateUser from './composant/CreateUser';
-import ModifierUser from './composant/ModifierUser';
+const App: React.FC = () => {
+    const [currentStep, setCurrentStep] = useState<'login' | 'otp' | 'users'>('login');
+    const [userPhone, setUserPhone] = useState('');
+    const [loading, setLoading] = useState(true);
 
-function App() {
+    useEffect(() => {
+        checkAuthStatus();
+    }, []);
 
-  return (
-    <BrowserRouter>
-      <Routes>
+    const checkAuthStatus = async () => {
+        try {
+            const status = await authService.getAuthStatus();
+            if (status.authenticated && status.otpVerified) {
+                setCurrentStep('users');
+            } else if (status.authenticated && !status.otpVerified) {
+                setCurrentStep('otp');
+                setUserPhone(status.phone || '');
+            } else {
+                setCurrentStep('login');
+            }
+        } catch (error) {
+            console.error('Erreur vérification statut:', error);
+            setCurrentStep('login');
+        } finally {
+            setLoading(false);
+        }
+    };
 
-        <Route path="/" element={<ListeUser />} />
-        <Route path="/create" element={<CreateUser />} />
-        <Route path="/edit/:id" element={<ModifierUser />} />
+    const handleLoginSuccess = (phone: string) => {
+        setUserPhone(phone);
+        setCurrentStep('otp');
+    };
 
-      </Routes>
-    </BrowserRouter>
-  )
-}
+    const handleOTPVerificationSuccess = () => {
+        setCurrentStep('users');
+        checkAuthStatus();
+    };
 
-export default App
+    const handleBackToLogin = () => {
+        setCurrentStep('login');
+        setUserPhone('');
+    };
+
+    const handleLogout = () => {
+        setCurrentStep('login');
+        setUserPhone('');
+        checkAuthStatus();
+    };
+
+    if (loading) {
+        return (
+            <div className="container d-flex justify-content-center align-items-center min-vh-100">
+                <div className="spinner-border" role="status">
+                    <span className="visually-hidden">Chargement...</span>
+                </div>
+            </div>
+        );
+    }
+
+    return (
+        <div className="App">
+            {currentStep === 'login' && (
+                <Login onLoginSuccess={handleLoginSuccess} />
+            )}
+
+            {currentStep === 'otp' && (
+                <OTPVerification
+                    phone={userPhone}
+                    onVerificationSuccess={handleOTPVerificationSuccess}
+                    onBack={handleBackToLogin}
+                />
+            )}
+
+            {currentStep === 'users' && (
+                <ListeUser onLogout={handleLogout} />
+            )}
+        </div>
+    );
+};
+
+export default App;

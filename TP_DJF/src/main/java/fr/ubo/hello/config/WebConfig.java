@@ -1,19 +1,29 @@
 package fr.ubo.hello.config;
 
-import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.EnableWebMvc;
+import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
-import com.fasterxml.jackson.databind.ObjectMapper;
 
 @Configuration
 @EnableWebMvc
 @ComponentScan(basePackages = "fr.ubo.hello.controller")
 public class WebConfig implements WebMvcConfigurer {
 
-    @Bean
-    public ObjectMapper objectMapper() {
-        return new ObjectMapper();
+    @Override
+    public void addCorsMappings(CorsRegistry registry) {
+        registry.addMapping("/api/**")
+                .allowedOrigins(
+                        "http://localhost:3000", // React
+                        "http://localhost:4200", // Angular
+                        "http://localhost:8081", // Autre port
+                        "http://localhost"       // Sans port
+                )
+                .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD")
+                .allowedHeaders("*")
+                .exposedHeaders("Authorization", "Content-Type") // Headers exposés au front
+                .allowCredentials(true)
+                .maxAge(3600); // Cache des preflight requests
     }
 }
