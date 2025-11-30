@@ -110,7 +110,7 @@ export default function ModifierUser() {
         updateData.password = formData.password;
       }
 
-      await axios.put(`http://localhost/api/users/${id}`, updateData);
+      await axios.put(`http://localhost:8080/api/users/${id}`, updateData);
       navigate("/");
       
     } catch (err: any) {

@@ -17,7 +17,6 @@ public class UserService {
     private UserDao userDao;
     private OTPDao otpDao;
 
-    // Cache pour gérer les délais entre demandes OTP
     private final ConcurrentHashMap<String, LocalDateTime> lastOTPRequestTime = new ConcurrentHashMap<>();
 
     public UserService() {
@@ -48,7 +47,6 @@ public class UserService {
         this.otpDao = otpDao;
     }
 
-    // === MÉTHODES UTILISATEUR EXISTANTES ===
 
     public List<User> getAllUsers() {
         return userDao.getAllUsers();
@@ -136,11 +134,8 @@ public class UserService {
         System.out.println("Passage aux DAO Base de Données");
     }
 
-    // === NOUVELLES MÉTHODES OTP ===
 
-    /**
-     * Sauvegarde une demande OTP en base de données
-     */
+
     public void saveOTPRequest(OTPRequest otpRequest) {
         try {
             boolean success = otpDao.saveOTPRequest(otpRequest);
@@ -155,9 +150,7 @@ public class UserService {
         }
     }
 
-    /**
-     * Trouve un OTP valide pour un numéro de téléphone
-     */
+
     public OTPRequest findValidOTP(String phoneNumber, LocalDateTime now) {
         try {
             OTPRequest otp = otpDao.findValidOTP(phoneNumber, now);
@@ -174,9 +167,7 @@ public class UserService {
         }
     }
 
-    /**
-     * Marque un OTP comme utilisé
-     */
+
     public void markOTPAsUsed(int otpId) {
         try {
             boolean success = otpDao.markOTPAsUsed(otpId);
@@ -191,9 +182,7 @@ public class UserService {
         }
     }
 
-    /**
-     * Incrémente le compteur de tentatives pour un OTP
-     */
+
     public void incrementOTPAttempts(int otpId) {
         try {
             boolean success = otpDao.incrementOTPAttempts(otpId);
@@ -206,9 +195,7 @@ public class UserService {
         }
     }
 
-    /**
-     * Vérifie si un nouvel OTP peut être demandé (respect du délai de 30 secondes)
-     */
+
     public boolean canRequestOTP(String phoneNumber) {
         LocalDateTime lastRequest = lastOTPRequestTime.get(phoneNumber);
         if (lastRequest == null) {
@@ -227,17 +214,13 @@ public class UserService {
         return canRequest;
     }
 
-    /**
-     * Enregistre le temps de la dernière demande OTP
-     */
+
     public void recordOTPRequestTime(String phoneNumber) {
         lastOTPRequestTime.put(phoneNumber, LocalDateTime.now());
         System.out.println("Temps OTP enregistré pour: " + phoneNumber);
     }
 
-    /**
-     * Nettoie les OTP expirés (maintenance)
-     */
+
     public void cleanupExpiredOTPs() {
         try {
             int deletedCount = otpDao.cleanupExpiredOTPs(LocalDateTime.now());
@@ -250,21 +233,17 @@ public class UserService {
         }
     }
 
-    /**
-     * Obtient le nombre de tentatives restantes pour un OTP
-     */
+
     public int getRemainingAttempts(int otpId) {
         try {
             return otpDao.getRemainingAttempts(otpId);
         } catch (Exception e) {
             System.err.println("Erreur obtention tentatives restantes: " + e.getMessage());
-            return 3; // Valeur par défaut
+            return 3;
         }
     }
 
-    /**
-     * Vérifie si un OTP est bloqué (trop de tentatives)
-     */
+
     public boolean isOTPBlocked(int otpId) {
         try {
             return otpDao.isOTPBlocked(otpId);
@@ -274,9 +253,7 @@ public class UserService {
         }
     }
 
-    /**
-     * Obtient les statistiques OTP pour le débogage
-     */
+
     public String getOTPStats() {
         try {
             int totalRequests = otpDao.getTotalOTPRequests();

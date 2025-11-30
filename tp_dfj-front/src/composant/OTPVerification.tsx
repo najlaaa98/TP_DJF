@@ -43,7 +43,7 @@ const OTPVerification: React.FC<OTPVerificationProps> = ({
             setCountdown(30);
         } catch (error: unknown) {
             if (error instanceof Error) {
-                setError(error.message || 'Erreur lors de l\'envoi de l\'OTP');
+                setError(error.message);
             } else {
                 setError('Erreur lors de l\'envoi de l\'OTP');
             }
@@ -62,7 +62,7 @@ const OTPVerification: React.FC<OTPVerificationProps> = ({
             onVerificationSuccess();
         } catch (error: unknown) {
             if (error instanceof Error) {
-                setError(error.message || 'Code OTP invalide');
+                setError(error.message);
             } else {
                 setError('Code OTP invalide');
             }

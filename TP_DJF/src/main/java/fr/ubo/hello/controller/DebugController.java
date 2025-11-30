@@ -90,9 +90,8 @@ public class DebugController {
             StringBuilder result = new StringBuilder();
             result.append("=== TEST COMPLET SMS ===\n\n");
 
-            // 1. Test health check
             boolean health = smsService.isServerAvailable();
-            result.append("1. Health Check: ").append(health ? "✅ OK" : "❌ FAIL").append("\n");
+            result.append("1. Health Check: ").append(health ? "OK" : " FAIL").append("\n");
 
             if (!health) {
                 result.append("Serveur inaccessible - test arrêté");
@@ -105,12 +104,12 @@ public class DebugController {
             String testMessage = "Test OTP - " + System.currentTimeMillis();
 
             boolean sent = smsService.sendSMS(testPhone, testMessage);
-            result.append("   - Résultat: ").append(sent ? "✅ ENVOYÉ" : " ÉCHEC").append("\n");
+            result.append("   - Résultat: ").append(sent ? "ENVOYÉ" : " ÉCHEC").append("\n");
             result.append("   - Téléphone: ").append(testPhone).append("\n");
             result.append("   - Message: ").append(testMessage).append("\n");
 
             result.append("\n=== FIN DU TEST ===\n");
-            result.append("📋 Vérifiez les logs pour les détails techniques");
+            result.append("Vérifiez les logs pour les détails techniques");
 
             return ResponseEntity.ok("{\"message\": \"" + result.toString() + "\"}");
 

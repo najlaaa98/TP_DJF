@@ -25,9 +25,10 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
             onLoginSuccess(response.phone || '');
         } catch (error: unknown) {
             if (error instanceof Error) {
-                setError(error.message || 'Erreur de connexion');
+                // Maintenant on reçoit le message d'erreur du backend
+                setError(error.message);
             } else {
-                setError('Erreur de connexion');
+                setError('Erreur de connexion inattendue');
             }
         } finally {
             setLoading(false);

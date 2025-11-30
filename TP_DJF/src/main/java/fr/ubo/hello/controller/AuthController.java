@@ -24,7 +24,6 @@ public class AuthController {
         this.otpService = new OTPService(userService);
     }
 
-    // Étape 1: Connexion avec email/mot de passe
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody AuthRequest request, HttpSession session) {
         try {
@@ -34,7 +33,6 @@ public class AuthController {
                         .body("{\"error\": \"Email et mot de passe requis\"}");
             }
 
-            // Authentifier l'utilisateur
             User user = userService.authenticate(request.getEmail(), request.getPassword());
 
             if (user == null) {
@@ -42,13 +40,11 @@ public class AuthController {
                         .body("{\"error\": \"Email ou mot de passe incorrect\"}");
             }
 
-            // Vérifier que l'utilisateur a un numéro de téléphone
             if (user.getTelephone() == null || user.getTelephone().trim().isEmpty()) {
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                         .body("{\"error\": \"Aucun numéro de téléphone associé à ce compte\"}");
             }
 
-            // Stocker l'utilisateur en session
             session.setAttribute("user", user);
             session.setAttribute("userId", user.getId());
             session.setAttribute("userPhone", user.getTelephone());
@@ -66,18 +62,15 @@ public class AuthController {
         }
     }
 
-    // Étape 2: Demander l'OTP après connexion
     @PostMapping("/request-otp")
     public ResponseEntity<?> requestOTP(HttpSession session) {
         try {
-            // Vérifier que l'utilisateur est connecté
             User user = (User) session.getAttribute("user");
             if (user == null) {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                         .body("{\"error\": \"Non authentifié\"}");
             }
 
-            // Récupérer le numéro depuis la session (déjà stocké lors du login)
             String userPhone = user.getTelephone();
 
             if (userPhone == null || userPhone.trim().isEmpty()) {
@@ -102,7 +95,6 @@ public class AuthController {
         }
     }
 
-    // Étape 3: Vérifier l'OTP
     @PostMapping("/verify-otp")
     public ResponseEntity<?> verifyOTP(@RequestBody AuthRequest request, HttpSession session) {
         try {
@@ -123,7 +115,6 @@ public class AuthController {
             boolean isValid = otpService.verifyOTP(userPhone, request.getOtpCode());
 
             if (isValid) {
-                // Marquer l'utilisateur comme authentifié par OTP
                 session.setAttribute("otpVerified", true);
                 return ResponseEntity.ok("{\"message\": \"Authentification OTP réussie\"}");
             } else {
@@ -137,14 +128,12 @@ public class AuthController {
         }
     }
 
-    // Déconnexion
     @PostMapping("/logout")
     public ResponseEntity<?> logout(HttpSession session) {
         session.invalidate();
         return ResponseEntity.ok("{\"message\": \"Déconnexion réussie\"}");
     }
 
-    // Vérifier le statut d'authentification
     @GetMapping("/status")
     public ResponseEntity<?> getAuthStatus(HttpSession session) {
         User user = (User) session.getAttribute("user");

@@ -6,8 +6,7 @@ import java.sql.*;
 
 public class OTPDaoBD implements OTPDao {
     private Connection getConnection() throws SQLException {
-        // Utilisez votre méthode de connexion existante
-        // Adaptez selon votre configuration
+
         return DriverManager.getConnection(
                 "jdbc:mysql://mysql-db:3306/guser", "root", "1234");
     }
@@ -100,7 +99,6 @@ public class OTPDaoBD implements OTPDao {
         return false;
     }
 
-    // Implémentez les autres méthodes de l'interface...
     @Override
     public int cleanupExpiredOTPs(LocalDateTime now) {
         String sql = "DELETE FROM otp_requests WHERE expires_at <= ? OR attempts >= 3";
@@ -127,7 +125,7 @@ public class OTPDaoBD implements OTPDao {
             stmt.setInt(1, otpId);
             try (ResultSet rs = stmt.executeQuery()) {
                 if (rs.next()) {
-                    return 3 - rs.getInt("attempts"); // 3 tentatives max
+                    return 3 - rs.getInt("attempts");
                 }
             }
         } catch (SQLException e) {

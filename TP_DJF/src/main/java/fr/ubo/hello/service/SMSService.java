@@ -20,13 +20,13 @@ public class SMSService {
 
     public boolean isServerAvailable() {
         try {
-            // Test avec l'endpoint /send-sms directement
+
             HttpHeaders headers = new HttpHeaders();
             headers.set("x-api-key", API_KEY);
             headers.set("accept", "application/json");
 
             Map<String, String> body = new HashMap<>();
-            body.put("to", "0600000000"); // Numéro test
+            body.put("to", "0600000000");
             body.put("message", "health check");
 
             HttpEntity<Map<String, String>> request = new HttpEntity<>(body, headers);
@@ -38,20 +38,20 @@ public class SMSService {
             );
 
             boolean available = response.getStatusCode().is2xxSuccessful();
-            System.out.println("🔍 Serveur SMS disponible: " + available);
+            System.out.println("Serveur SMS disponible: " + available);
             return available;
 
         } catch (Exception e) {
-            System.err.println("❌ Serveur SMS inaccessible: " + e.getMessage());
+            System.err.println("Serveur SMS inaccessible: " + e.getMessage());
             return false;
         }
     }
 
     public boolean sendSMS(String phoneNumber, String message) {
-        System.out.println("🚀 ENVOI SMS vers: " + phoneNumber);
+        System.out.println("ENVOI SMS vers: " + phoneNumber);
 
         String cleanPhone = cleanPhoneNumber(phoneNumber);
-        System.out.println("🔧 Numéro nettoyé: " + cleanPhone);
+        System.out.println("Numéro nettoyé: " + cleanPhone);
 
         try {
             HttpHeaders headers = new HttpHeaders();
@@ -66,32 +66,31 @@ public class SMSService {
             HttpEntity<Map<String, String>> request = new HttpEntity<>(body, headers);
 
             String fullUrl = SMS_SERVER_URL + "/send-sms";
-            System.out.println("🌐 Envoi vers: " + fullUrl);
+            System.out.println("Envoi vers: " + fullUrl);
 
             ResponseEntity<String> response = restTemplate.postForEntity(fullUrl, request, String.class);
 
-            System.out.println("📡 Réponse - Status: " + response.getStatusCode());
-            System.out.println("📄 Body: " + response.getBody());
+            System.out.println("Réponse - Status: " + response.getStatusCode());
+            System.out.println("Body: " + response.getBody());
 
             boolean success = response.getStatusCode().is2xxSuccessful();
 
             if (success) {
-                System.out.println("✅ SMS envoyé avec succès");
+                System.out.println("SMS envoyé avec succès");
             } else {
-                System.out.println("❌ Échec - Status: " + response.getStatusCode());
+                System.out.println("Échec - Status: " + response.getStatusCode());
             }
 
             return success;
 
         } catch (Exception e) {
-            System.err.println("💥 Erreur: " + e.getClass().getSimpleName());
-            System.err.println("💬 Message: " + e.getMessage());
+            System.err.println("Erreur: " + e.getClass().getSimpleName());
+            System.err.println("Message: " + e.getMessage());
 
-            // Log détaillé pour les erreurs HTTP
             if (e instanceof org.springframework.web.client.HttpClientErrorException) {
                 org.springframework.web.client.HttpClientErrorException httpEx =
                         (org.springframework.web.client.HttpClientErrorException) e;
-                System.err.println("📡 Body erreur: " + httpEx.getResponseBodyAsString());
+                System.err.println("Body erreur: " + httpEx.getResponseBodyAsString());
             }
 
             return false;

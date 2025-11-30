@@ -33,35 +33,34 @@ public class OTPService {
         OTPRequest otpRequest = new OTPRequest(cleanPhone, otpCode, expiresAt);
         userService.saveOTPRequest(otpRequest);
 
-        System.out.println("🔐 OTP Généré: " + otpCode + " pour " + cleanPhone);
+        System.out.println(" OTP Généré: " + otpCode + " pour " + cleanPhone);
 
         boolean sent = false;
         String smsMessage = "Votre code de vérification: " + otpCode + " - Expire dans " + OTP_EXPIRATION_MINUTES + " minutes";
 
-        System.out.println("🚀 Tentative d'envoi SMS via serveur...");
+        System.out.println(" Tentative d'envoi SMS via serveur...");
 
         try {
             sent = smsService.sendSMS(cleanPhone, smsMessage);
 
             if (!sent) {
-                System.out.println("🔄 Premier envoi échoué, tentative de retry...");
+                System.out.println("Premier envoi échoué, tentative de retry...");
                 sent = smsService.sendSMS(cleanPhone, smsMessage);
             }
         } catch (Exception e) {
-            System.err.println("💥 Exception lors de l'envoi SMS: " + e.getMessage());
+            System.err.println("Exception lors de l'envoi SMS: " + e.getMessage());
         }
 
         if (sent) {
             userService.recordOTPRequestTime(cleanPhone);
-            System.out.println("✅ OTP envoyé avec succès par SMS");
+            System.out.println("OTP envoyé avec succès par SMS");
             return "OTP envoyé avec succès par SMS";
         } else {
-            // Fallback pour le développement
-            System.out.println("🔧 Mode développement activé - SMS non envoyé");
+            System.out.println("Mode développement activé - SMS non envoyé");
             System.out.println("=== MODE DÉVELOPPEMENT ===");
-            System.out.println("📱 OTP Généré: " + otpCode);
-            System.out.println("📞 Pour le numéro: " + cleanPhone);
-            System.out.println("⏰ Expire à: " + expiresAt);
+            System.out.println("OTP Généré: " + otpCode);
+            System.out.println(" Pour le numéro: " + cleanPhone);
+            System.out.println("Expire à: " + expiresAt);
             System.out.println("=== FIN MODE DÉVELOPPEMENT ===");
 
             userService.recordOTPRequestTime(cleanPhone);

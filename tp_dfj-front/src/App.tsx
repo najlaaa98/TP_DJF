@@ -1,14 +1,18 @@
 // App.tsx
 import React, { useState, useEffect } from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Login from './composant/Login';
 import OTPVerification from './composant/OTPVerification';
 import ListeUser from './composant/ListeUser';
+import CreateUser from './composant/CreateUser';
+import ModifierUser from './composant/ModifierUser';
 import { authService } from './services/api';
 
 const App: React.FC = () => {
     const [currentStep, setCurrentStep] = useState<'login' | 'otp' | 'users'>('login');
     const [userPhone, setUserPhone] = useState('');
     const [loading, setLoading] = useState(true);
+    const [isAuthenticated, setIsAuthenticated] = useState(false);
 
     useEffect(() => {
         checkAuthStatus();
@@ -18,16 +22,19 @@ const App: React.FC = () => {
         try {
             const status = await authService.getAuthStatus();
             if (status.authenticated && status.otpVerified) {
+                setIsAuthenticated(true);
                 setCurrentStep('users');
             } else if (status.authenticated && !status.otpVerified) {
                 setCurrentStep('otp');
                 setUserPhone(status.phone || '');
             } else {
                 setCurrentStep('login');
+                setIsAuthenticated(false);
             }
         } catch (error) {
             console.error('Erreur vérification statut:', error);
             setCurrentStep('login');
+            setIsAuthenticated(false);
         } finally {
             setLoading(false);
         }
@@ -39,19 +46,20 @@ const App: React.FC = () => {
     };
 
     const handleOTPVerificationSuccess = () => {
+        setIsAuthenticated(true);
         setCurrentStep('users');
-        checkAuthStatus();
     };
 
     const handleBackToLogin = () => {
         setCurrentStep('login');
         setUserPhone('');
+        setIsAuthenticated(false);
     };
 
     const handleLogout = () => {
         setCurrentStep('login');
         setUserPhone('');
-        checkAuthStatus();
+        setIsAuthenticated(false);
     };
 
     if (loading) {
@@ -64,24 +72,49 @@ const App: React.FC = () => {
         );
     }
 
+    // Si l'utilisateur n'est pas authentifié, afficher le flux d'authentification
+    if (!isAuthenticated && currentStep !== 'users') {
+        return (
+            <div className="App">
+                {currentStep === 'login' && (
+                    <Login onLoginSuccess={handleLoginSuccess} />
+                )}
+
+                {currentStep === 'otp' && (
+                    <OTPVerification
+                        phone={userPhone}
+                        onVerificationSuccess={handleOTPVerificationSuccess}
+                        onBack={handleBackToLogin}
+                    />
+                )}
+            </div>
+        );
+    }
+
+    // Si l'utilisateur est authentifié, afficher le routage
     return (
-        <div className="App">
-            {currentStep === 'login' && (
-                <Login onLoginSuccess={handleLoginSuccess} />
-            )}
-
-            {currentStep === 'otp' && (
-                <OTPVerification
-                    phone={userPhone}
-                    onVerificationSuccess={handleOTPVerificationSuccess}
-                    onBack={handleBackToLogin}
-                />
-            )}
-
-            {currentStep === 'users' && (
-                <ListeUser onLogout={handleLogout} />
-            )}
-        </div>
+        <Router>
+            <div className="App">
+                <Routes>
+                    <Route
+                        path="/"
+                        element={<ListeUser onLogout={handleLogout} />}
+                    />
+                    <Route
+                        path="/create-user"
+                        element={<CreateUser />}
+                    />
+                    <Route
+                        path="/edit-user/:id"
+                        element={<ModifierUser />}
+                    />
+                    <Route
+                        path="*"
+                        element={<Navigate to="/" replace />}
+                    />
+                </Routes>
+            </div>
+        </Router>
     );
 };
 

@@ -11,7 +11,6 @@ public class OTPRequest {
     private boolean used;
     private int attempts;
 
-    // Constructeurs
     public OTPRequest() {}
 
     public OTPRequest(String phoneNumber, String otpCode, LocalDateTime expiresAt) {
@@ -23,7 +22,6 @@ public class OTPRequest {
         this.createdAt = LocalDateTime.now();
     }
 
-    // Getters et Setters
     public int getId() { return id; }
     public void setId(int id) { this.id = id; }
 

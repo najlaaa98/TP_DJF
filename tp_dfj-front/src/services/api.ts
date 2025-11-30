@@ -7,35 +7,48 @@ const API_BASE_URL = 'http://localhost:8080/api';
 // Configuration Axios pour gérer les sessions
 const api = axios.create({
     baseURL: API_BASE_URL,
-    withCredentials: true, // Important pour les sessions
+    withCredentials: true,
 });
 
+// Intercepteur pour gérer les erreurs de manière uniforme
+api.interceptors.response.use(
+    (response) => response,
+    (error) => {
+        if (error.response) {
+            // Le serveur a répondu avec un code d'erreur
+            const message = error.response.data?.error || error.response.data?.message || 'Erreur inconnue';
+            throw new Error(message);
+        } else if (error.request) {
+            // La requête a été faite mais aucune réponse n'a été reçue
+            throw new Error('Serveur inaccessible. Vérifiez votre connexion.');
+        } else {
+            // Une erreur s'est produite lors de la configuration de la requête
+            throw new Error('Erreur de configuration de la requête.');
+        }
+    }
+);
+
 class AuthService {
-    // Connexion email/mot de passe
     async login(credentials: AuthRequest): Promise<AuthResponse> {
         const response = await api.post<AuthResponse>('/auth/login', credentials);
         return response.data;
     }
 
-    // Demander l'envoi d'OTP
     async requestOTP(): Promise<AuthResponse> {
         const response = await api.post<AuthResponse>('/auth/request-otp');
         return response.data;
     }
 
-    // Vérifier l'OTP
     async verifyOTP(otpCode: string): Promise<AuthResponse> {
         const response = await api.post<AuthResponse>('/auth/verify-otp', { otpCode });
         return response.data;
     }
 
-    // Déconnexion
     async logout(): Promise<AuthResponse> {
         const response = await api.post<AuthResponse>('/auth/logout');
         return response.data;
     }
 
-    // Vérifier le statut d'authentification
     async getAuthStatus(): Promise<AuthStatus> {
         const response = await api.get<AuthStatus>('/auth/status');
         return response.data;
@@ -43,16 +56,17 @@ class AuthService {
 }
 
 class UserService {
-    // Récupérer tous les utilisateurs
     async getAllUsers(): Promise<User[]> {
         const response = await api.get<User[]>('/users');
         return response.data;
     }
 
-    // Récupérer un utilisateur par ID
     async getUserById(id: number): Promise<User> {
         const response = await api.get<User>(`/users/${id}`);
         return response.data;
+    }
+    async deleteUser(id: number): Promise<void> {
+        await api.delete(`/users/${id}`);
     }
 }
 

@@ -15,15 +15,15 @@ public class WebConfig implements WebMvcConfigurer {
     public void addCorsMappings(CorsRegistry registry) {
         registry.addMapping("/api/**")
                 .allowedOrigins(
-                        "http://localhost:3000", // React
-                        "http://localhost:4200", // Angular
-                        "http://localhost:8081", // Autre port
-                        "http://localhost"       // Sans port
+                        "http://localhost:3000",
+                        "http://localhost:4200",
+                        "http://localhost:8081",
+                        "http://localhost"
                 )
                 .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD")
                 .allowedHeaders("*")
-                .exposedHeaders("Authorization", "Content-Type") // Headers exposés au front
+                .exposedHeaders("Authorization", "Content-Type")
                 .allowCredentials(true)
-                .maxAge(3600); // Cache des preflight requests
+                .maxAge(3600);
     }
 }
